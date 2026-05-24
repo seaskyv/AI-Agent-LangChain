@@ -1,0 +1,46 @@
+from langchain_openai import ChatOpenAI
+from langchain.agents import AgentExecutor, create_tool_calling_agent
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.tools import tool
+
+# --- Define tools the agent can use ---
+
+@tool
+def get_weather(city: str) -> str:
+    """Get current weather for a city."""
+    # In real life, call an API
+    fake_data = {
+        "sydney": "22°C, partly cloudy",
+        "beijing": "18°C, sunny",
+    }
+    return fake_data.get(city.lower(), f"No data for {city}")
+
+@tool
+def calculate(expression: str) -> str:
+    """Evaluate a math expression."""
+    return str(eval(expression))
+
+# --- Set up the LLM ---
+
+llm = ChatOpenAI(model="gpt-4o-mini")
+
+# --- Create the prompt ---
+
+prompt = ChatPromptTemplate.from_messages([
+    ("system", "You are a helpful assistant. Use tools when needed."),
+    ("human", "{input}"),
+    ("placeholder", "{agent_scratchpad}"),
+])
+
+# --- Build the agent ---
+
+tools = [get_weather, calculate]
+agent = create_tool_calling_agent(llm, tools, prompt)
+executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
+
+# --- Run it ---
+
+result = executor.invoke({
+    "input": "What's the weather in Sydney? Also what's 1500 * 0.85?"
+})
+print(result["output"])
